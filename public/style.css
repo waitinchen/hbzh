@@ -932,3 +932,30 @@ html, body {
     height: 52px;
   }
 }
+
+/* ========================================
+   AVATAR OVERLAY — 點擊放大
+   ======================================== */
+.avatar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  animation: fadeIn var(--duration-normal) var(--ease-out);
+}
+.avatar-overlay__img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: var(--radius-lg);
+  object-fit: contain;
+  animation: avatarZoomIn 0.3s var(--ease-spring);
+}
+@keyframes avatarZoomIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.avatar-img { cursor: pointer; }

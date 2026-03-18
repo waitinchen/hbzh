@@ -62,7 +62,9 @@ const MAX_SILENCE_NUDGES = 4;
 const WS_PING_MS       = 25000;
 const DG_KEEPALIVE_MS  = 10000;
 
-const VALID_EMOTIONS = new Set(['happy','sad','angry','fearful','disgusted','surprised','calm','fluent','whisper']);
+const VALID_EMOTIONS = new Set(['happy','sad','angry','fearful','disgusted','surprised','calm','fluent']);
+// MiniMax speech-2.8-hd 不支援 whisper，映射到 calm
+const EMOTION_MAP = { whisper: 'calm' };
 
 // ── Anthropic client ─────────────────────────────────────────────────────
 const anthropic = ANTHROPIC_API_KEY
@@ -326,7 +328,8 @@ async function miniMaxTTS(ws, rawText, emotion, abortSignal) {
     .replace(/\s{2,}/g, ' ')
     .trim();
   if (!MINIMAX_API_KEY || !text) return 0;
-  const safeEmotion = VALID_EMOTIONS.has(emotion) ? emotion : 'happy';
+  const mapped = EMOTION_MAP[emotion] || emotion;
+  const safeEmotion = VALID_EMOTIONS.has(mapped) ? mapped : 'happy';
   send(ws, { type: 'status', state: 'speaking' });
   isTtsPlaying.set(ws, true);
 
@@ -610,14 +613,14 @@ function createDeepgramConnection(ws, callerName, attempt = 0) {
       if (msg.type === 'SpeechStarted') {
         console.log('[DG] Speech started');
         if (ttsActiveMap.get(ws) || responseActiveMap.get(ws)) {
-          // debounce 300ms — 避免回音誤觸打斷，等確認是真人說話
+          // debounce 800ms — 避免回音誤觸打斷，等確認是真人說話
           if (!interruptDebounceMap.has(ws)) {
             const t = setTimeout(() => {
               interruptDebounceMap.delete(ws);
               if (ttsActiveMap.get(ws) || responseActiveMap.get(ws)) {
                 handleInterrupt(ws);
               }
-            }, 300);
+            }, 800);
             interruptDebounceMap.set(ws, t);
           }
         } else {

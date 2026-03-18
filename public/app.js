@@ -602,6 +602,13 @@
     setActivityState('thinking');
   });
 
+  // 頭像點擊放大
+  const avatarOverlay = $('avatar-overlay');
+  document.querySelectorAll('.avatar-img').forEach(img => {
+    img.addEventListener('click', () => { avatarOverlay.style.display = 'flex'; });
+  });
+  if (avatarOverlay) avatarOverlay.addEventListener('click', () => { avatarOverlay.style.display = 'none'; });
+
   if ('serviceWorker' in navigator) {
     // ★ 新 SW 接管時自動 reload，確保拿到最新 app.js
     navigator.serviceWorker.addEventListener('controllerchange', () => {
