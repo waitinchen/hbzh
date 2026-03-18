@@ -538,6 +538,7 @@ html, body {
   border: 1.5px solid var(--neon-green);
   opacity: 0;
   animation: ringPulse 2s ease-out infinite;
+  pointer-events: none;
 }
 
 .avatar-ring__pulse--delay {
@@ -958,4 +959,10 @@ html, body {
   from { transform: scale(0.5); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
-.avatar-img { cursor: pointer; }
+.avatar-img {
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
