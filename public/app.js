@@ -61,6 +61,13 @@
   let currentBlobUrl = null;
   const audioEl = new Audio();
   let playbackWatchdog = null; // 防止 isPlaying 卡住的安全計時器
+  let audioUnlocked = false;
+  // PC Chrome autoplay policy: 需要 user gesture 解鎖 audio
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioEl.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwMHAAAAAAD/+1DEAAAGAANIAAAARILQ2EoAAAAN//tQxBYAAADSAAAAAAAAANIAAAAASW5mbwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwMHAAAAAAA=';
+    audioEl.play().then(() => { audioEl.pause(); audioEl.src = ''; audioUnlocked = true; console.log('[Audio] Unlocked'); }).catch(() => {});
+  }
 
   // State
   let callTimerInterval = null, callStartTime = 0;
@@ -85,14 +92,25 @@
     const u = window.location;
     return (u.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + u.host + '/voice';
   }
-  function getToken() { return localStorage.getItem(TOKEN_KEY); }
+  function getToken() { return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY); }
+  function getUsername() { return localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY); }
   function setToken(token, username) {
-    if (token) { localStorage.setItem(TOKEN_KEY, token); if (username) localStorage.setItem(USER_KEY, username); }
-    else { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); }
+    if (token) {
+      const remember = $('input-remember')?.checked !== false;
+      const store = remember ? localStorage : sessionStorage;
+      store.setItem(TOKEN_KEY, token);
+      if (username) store.setItem(USER_KEY, username);
+      // 清除另一個 storage 避免殘留
+      const other = remember ? sessionStorage : localStorage;
+      other.removeItem(TOKEN_KEY); other.removeItem(USER_KEY);
+    } else {
+      localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY);
+      sessionStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem(USER_KEY);
+    }
   }
   function checkAuth() {
     const token = getToken();
-    if (token) { userNameEl.textContent = localStorage.getItem(USER_KEY) || '用戶'; showPage(pageHome); }
+    if (token) { userNameEl.textContent = getUsername() || '用戶'; showPage(pageHome); }
     else showPage(pageLogin);
   }
   let streamingLine = null; // reuse same line for streaming assistant deltas
@@ -428,7 +446,7 @@
   // ── WebSocket ────────────────────────────────────────────────
   function connectVoice() {
     const token = getToken(); if (!token) { callStatus.textContent = '請先登入'; return; }
-    const name = localStorage.getItem(USER_KEY) || '';
+    const name = getUsername() || '';
     const url = getWsUrl() + '?token=' + encodeURIComponent(token) + '&name=' + encodeURIComponent(name);
     intentionalClose = false;
     try { ws = new WebSocket(url); } catch { callStatus.textContent = '連線失敗'; return; }
@@ -551,6 +569,7 @@
   btnLogout.addEventListener('click', () => { setToken(null); disconnectVoice(); showPage(pageLogin); inputPassword.value=''; });
 
   btnCall.addEventListener('click', () => {
+    unlockAudio();
     transcriptBox.innerHTML = ''; streamingLine = null;
     audioChunks = []; audioQueue = []; isPlaying = false; isProcessing = false;
     showPage(pageCall); setCallState('ringing'); connectVoice();

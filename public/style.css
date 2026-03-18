@@ -177,6 +177,22 @@ html, body {
   box-shadow: 0 0 0 3px var(--neon-green-dim);
 }
 
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: var(--space-sm) 0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.6);
+}
+.remember-me input[type="checkbox"] {
+  width: 18px; height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.remember-me span { user-select: none; }
+
 .error-text {
   color: var(--danger);
   font-size: 0.8rem;
