@@ -61,12 +61,23 @@
   let currentBlobUrl = null;
   const audioEl = new Audio();
   let playbackWatchdog = null; // 防止 isPlaying 卡住的安全計時器
-  let audioUnlocked = false;
-  // PC Chrome autoplay policy: 需要 user gesture 解鎖 audio
+  // PC Chrome autoplay policy: user gesture 內觸發一次 play 解鎖
   function unlockAudio() {
-    if (audioUnlocked) return;
-    audioEl.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwMHAAAAAAD/+1DEAAAGAANIAAAARILQ2EoAAAAN//tQxBYAAADSAAAAAAAAANIAAAAASW5mbwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwMHAAAAAAA=';
-    audioEl.play().then(() => { audioEl.pause(); audioEl.src = ''; audioUnlocked = true; console.log('[Audio] Unlocked'); }).catch(() => {});
+    // 用 user gesture 建立 AudioContext（通知瀏覽器允許音訊）
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      // 播一個極短靜音 buffer
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start();
+      src.onended = () => ctx.close();
+    } catch (e) {}
+    // 同時解鎖 HTMLAudioElement
+    audioEl.muted = true;
+    audioEl.play().then(() => { audioEl.pause(); audioEl.muted = false; }).catch(() => { audioEl.muted = false; });
   }
 
   // State
