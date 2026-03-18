@@ -1,6 +1,7 @@
 /**
  * 河北彩花 Voice Call — Frontend v12
- * STT+LLM: getUserMedia → PCM → WebSocket binary → Server → OpenAI Realtime
+ * STT: getUserMedia → PCM → WebSocket binary → Server → Deepgram Nova-2
+ * LLM: Anthropic Claude (streaming)
  * TTS: MiniMax streaming chunks → sentence queue → sequential playback
  * 打斷: server sends interrupt → client stops playback immediately
  */
