@@ -1,0 +1,44 @@
+# 環境變數（含 API Key），勿提交
+.env
+.env.local
+.env.*.local
+
+# 依賴
+node_modules/
+
+# 日誌與暫存
+*.log
+.DS_Store
+Thumbs.db
+
+# 執行時產生
+user_facts.json
+
+# 測試產物
+pytest_output.txt
+pytest_result.json
+
+# 音訊檔案
+*.mp3
+*.wav
+*.ogg
+*.m4a
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/
+
+# 舊專案殘留（不追蹤）
+xiaos-call-pwa/
+realtime-voice-app/
+docs/
+ne-call-ui-preview.html
+CLAUDE_CODE_GUIDE.md
+TT.png
+.augment/

@@ -1,0 +1,918 @@
+/*
+ * 霓 (Né) Voice Call UI
+ * ─────────────────────────────────────────
+ * Canvas: #000000 (pure black) absorbs noise
+ * Light:  #FFFFFF (pure white) illuminates paths
+ * Accent: Neon emerald #00D26A (LINE green) + violet glow
+ * Ratio:  0.618 golden ratio governs spacing
+ * Style:  Muji breathing + Esport neon keyframes
+ * ─────────────────────────────────────────
+ * Reset CSS — 歸零，重置所有預設偏見
+ */
+
+/* ========== RESET & CANVAS ========== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* 霓 Core Palette */
+  --black: #000000;
+  --white: #FFFFFF;
+  --surface: #0a0a0a;
+  --surface-elevated: #111111;
+  --border: #1a1a1a;
+  --border-light: #222222;
+
+  /* Neon Accent — LINE Green */
+  --neon-green: #00D26A;
+  --neon-green-dim: rgba(0, 210, 106, 0.15);
+  --neon-green-glow: rgba(0, 210, 106, 0.4);
+
+  /* Neon Secondary — Violet (霓虹) */
+  --neon-violet: #8B5CF6;
+  --neon-violet-dim: rgba(139, 92, 246, 0.15);
+  --neon-violet-glow: rgba(139, 92, 246, 0.3);
+
+  /* Semantic */
+  --danger: #FF3B30;
+  --danger-glow: rgba(255, 59, 48, 0.3);
+  --amber: #FFD60A;
+  --amber-dim: rgba(255, 214, 10, 0.15);
+  --text-primary: #F5F5F7;
+  --text-secondary: #86868B;
+  --text-tertiary: #48484A;
+
+  /* Spacing (golden ratio inspired) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+
+  /* Typography */
+  --font: -apple-system, "SF Pro Display", "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 200ms;
+  --duration-normal: 400ms;
+  --duration-slow: 800ms;
+
+  /* Safe areas */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html, body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: var(--font);
+  background: var(--black);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+}
+
+#app {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ========== PAGE SYSTEM ========== */
+.page {
+  display: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+.page.active {
+  display: flex;
+  opacity: 1;
+  z-index: 1;
+}
+
+/* ========================================
+   LOGIN PAGE
+   ======================================== */
+#page-login.active {
+  align-items: center;
+  justify-content: center;
+  background: var(--black);
+}
+
+.login-wrapper {
+  width: 100%;
+  max-width: 320px;
+  padding: 0 var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.login-avatar {
+  margin-bottom: var(--space-lg);
+}
+
+.login-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--white);
+  margin-bottom: var(--space-xs);
+}
+
+.login-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xl);
+}
+
+#form-login {
+  width: 100%;
+}
+
+.input-group {
+  margin-bottom: var(--space-md);
+}
+
+.input-group input {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-family: var(--font);
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+  outline: none;
+}
+
+.input-group input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.input-group input:focus {
+  border-color: var(--neon-green);
+  box-shadow: 0 0 0 3px var(--neon-green-dim);
+}
+
+.error-text {
+  color: var(--danger);
+  font-size: 0.8rem;
+  min-height: 1.2em;
+  margin-bottom: var(--space-sm);
+  text-align: center;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--neon-green);
+  color: var(--black);
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-spring),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.btn-primary:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 24px var(--neon-green-glow);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ========================================
+   AVATAR CIRCLES
+   ======================================== */
+.avatar-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  font-weight: 800;
+  color: var(--white);
+  background: linear-gradient(135deg, var(--neon-green), var(--neon-violet));
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.avatar-circle--login {
+  width: 72px;
+  height: 72px;
+  font-size: 2rem;
+}
+
+.avatar-circle--large {
+  width: 96px;
+  height: 96px;
+  font-size: 2.5rem;
+}
+
+.avatar-circle--call {
+  width: min(100px, 15vh);
+  height: min(100px, 15vh);
+  font-size: min(2.75rem, 5vh);
+  position: relative;
+  z-index: 2;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-full);
+}
+
+/* ========================================
+   HOME PAGE
+   ======================================== */
+#page-home.active {
+  flex-direction: column;
+  background: var(--black);
+}
+
+.home-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-md);
+}
+
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) 0;
+}
+
+.home-header__left,
+.home-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.health-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+  transition: background var(--duration-fast);
+}
+.health-dot.online { background: var(--neon-green); box-shadow: 0 0 6px var(--neon-green-glow); }
+.health-dot.offline { background: var(--danger); }
+
+.health-label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.key-indicators {
+  display: flex;
+  gap: 8px;
+  margin-right: 12px;
+  padding-right: 12px;
+  border-right: 1px solid var(--border);
+}
+
+.key-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  letter-spacing: 0.03em;
+}
+
+.key-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+  transition: background var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.key-indicator.ok .key-dot {
+  background: var(--neon-green);
+  box-shadow: 0 0 6px var(--neon-green-glow);
+}
+
+.key-indicator.ok {
+  color: var(--text-secondary);
+}
+
+.key-indicator.fail .key-dot {
+  background: var(--danger);
+  box-shadow: 0 0 6px var(--danger-glow);
+}
+
+.key-indicator.fail {
+  color: var(--danger);
+}
+
+.user-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.btn-ghost {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: color var(--duration-fast), border-color var(--duration-fast);
+}
+.btn-ghost:hover {
+  color: var(--text-primary);
+  border-color: var(--border-light);
+}
+
+/* Contact Card */
+.contact-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  /* Golden ratio positioning: 38.2% from top */
+  padding-bottom: 20%;
+}
+
+.contact-name {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--white);
+}
+
+.contact-status {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* Call Button (LINE style circle) */
+.home-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-bottom: var(--space-2xl);
+}
+
+.btn-call-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--neon-green);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-spring),
+              box-shadow var(--duration-normal) var(--ease-out);
+  box-shadow: 0 0 20px var(--neon-green-dim);
+}
+
+.btn-call-circle:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 40px var(--neon-green-glow), 0 0 80px var(--neon-green-dim);
+}
+
+.btn-call-circle:active {
+  transform: scale(0.95);
+}
+
+.call-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: var(--space-xs);
+}
+
+/* ========================================
+   CALL PAGE — LINE Voice Call Style
+   ======================================== */
+#page-call.active {
+  flex-direction: column;
+  background: var(--black);
+}
+
+.call-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Background glow effect */
+.call-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200%;
+  height: 80%;
+  background: radial-gradient(ellipse at center, var(--neon-green-dim) 0%, transparent 60%);
+  opacity: 0.3;
+  pointer-events: none;
+  animation: breathe 4s ease-in-out infinite;
+}
+
+/* Top Info */
+.call-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-lg) var(--space-md) var(--space-sm);
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.call-top__status {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  transition: color var(--duration-fast);
+}
+
+.call-top__status.ringing {
+  color: var(--neon-green);
+  animation: textPulse 1.5s ease-in-out infinite;
+}
+
+.call-top__timer {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  min-height: 1.2em;
+  margin-top: var(--space-xs);
+  letter-spacing: 0.05em;
+}
+
+/* Center Avatar */
+.call-center {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.avatar-ring {
+  position: relative;
+  width: min(120px, 18vh);
+  height: min(120px, 18vh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-ring__pulse {
+  position: absolute;
+  inset: -10px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--neon-green);
+  opacity: 0;
+  animation: ringPulse 2s ease-out infinite;
+}
+
+.avatar-ring__pulse--delay {
+  animation-delay: 0.8s;
+}
+
+/* Hide pulse when connected */
+.call-wrapper.connected .avatar-ring__pulse {
+  animation: none;
+  opacity: 0;
+}
+
+.call-contact-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--white);
+}
+
+.call-activity {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  min-height: 1.2em;
+  transition: color var(--duration-fast);
+}
+
+.call-activity.active {
+  color: var(--neon-green);
+  animation: textPulse 1.2s ease-in-out infinite;
+}
+
+/* Waveform */
+.waveform-container {
+  padding: 0 var(--space-lg);
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+#waveform-canvas {
+  width: 100%;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  opacity: 0.8;
+}
+
+/* Bottom Actions — LINE Style */
+.call-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-md) var(--space-xl);
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.call-actions-row {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-xl);
+  width: 100%;
+  max-width: 320px;
+}
+
+.action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.action-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-spring),
+              background var(--duration-fast),
+              color var(--duration-fast),
+              box-shadow var(--duration-fast);
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: scale(1.08);
+  background: var(--border-light);
+}
+
+.action-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.action-btn.active {
+  background: var(--neon-green);
+  color: var(--black);
+  box-shadow: 0 0 16px var(--neon-green-glow);
+}
+
+.action-btn.muted {
+  background: var(--danger);
+  color: var(--white);
+  box-shadow: 0 0 16px var(--danger-glow);
+}
+
+.action-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.action-label {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+/* Hangup Button */
+.btn-hangup {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--danger);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-spring),
+              box-shadow var(--duration-fast);
+  box-shadow: 0 0 20px var(--danger-glow);
+}
+
+.btn-hangup:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 40px var(--danger-glow);
+}
+
+.btn-hangup:active {
+  transform: scale(0.92);
+}
+
+/* Transcript — Floating HUD below avatar */
+.transcript-drawer {
+  position: absolute;
+  top: 58%;
+  left: 0;
+  right: 0;
+  bottom: 200px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Toggle bar hidden — always visible */
+.transcript-toggle { display: none; }
+
+.transcript-box {
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--space-md) var(--space-lg);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  pointer-events: auto;
+  scrollbar-width: none;           /* Firefox */
+  -ms-overflow-style: none;        /* IE/Edge */
+  /* Fade top & bottom edges */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 18%,
+    black 82%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 18%,
+    black 82%,
+    transparent 100%
+  );
+}
+.transcript-box::-webkit-scrollbar { display: none; }
+
+.transcript-box .line {
+  margin-bottom: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  animation: fadeIn var(--duration-normal) var(--ease-out);
+}
+
+.transcript-box .line.user {
+  color: var(--neon-green);
+  background: rgba(0, 210, 106, 0.1);
+}
+
+.transcript-box .line.assistant {
+  color: var(--text-primary);
+  background: rgba(17, 17, 17, 0.7);
+}
+
+.transcript-box .line.system {
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  text-align: center;
+  background: transparent;
+}
+
+/* ========================================
+   PWA INSTALL BANNER
+   ======================================== */
+.install-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  padding-bottom: calc(var(--space-md) + var(--safe-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+  z-index: 100;
+}
+
+.install-banner span { flex: 1; }
+
+.btn-install {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--neon-green);
+  color: var(--black);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-dismiss {
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 1.4rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ========================================
+   ANIMATIONS — 霓虹 Keyframes
+   ======================================== */
+@keyframes ringPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes textPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes neonGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px var(--neon-green-dim), 0 0 30px var(--neon-green-dim);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--neon-green-glow), 0 0 60px var(--neon-green-dim);
+  }
+}
+
+/* Connected state: gentle neon glow on avatar */
+.call-wrapper.connected .avatar-circle--call {
+  animation: neonGlow 3s ease-in-out infinite;
+}
+
+/* ========================================
+   PWA STANDALONE MODE
+   ======================================== */
+@media all and (display-mode: standalone) {
+  html, body {
+    overscroll-behavior-y: contain;
+    touch-action: manipulation;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  #app {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+/* ========================================
+   RESPONSIVE — 12-column grid awareness
+   ======================================== */
+@media (min-width: 480px) {
+  .call-actions-row {
+    gap: var(--space-2xl);
+  }
+  .action-btn {
+    width: 64px;
+    height: 64px;
+  }
+  .action-icon {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (min-width: 768px) {
+  .call-center {
+    padding-bottom: 15%;
+  }
+  .avatar-circle--call {
+    width: 120px;
+    height: 120px;
+    font-size: 3.5rem;
+  }
+  .avatar-ring {
+    width: 140px;
+    height: 140px;
+  }
+}
+
+/* Short viewport — compact call layout */
+@media (max-height: 600px) {
+  .call-top {
+    padding: var(--space-sm) var(--space-md) var(--space-xs);
+  }
+  .avatar-ring {
+    width: 80px;
+    height: 80px;
+  }
+  .avatar-circle--call {
+    width: 64px;
+    height: 64px;
+    font-size: 1.75rem;
+  }
+  .call-contact-name {
+    font-size: 1.1rem;
+  }
+  .call-center {
+    gap: var(--space-xs);
+  }
+  #waveform-canvas {
+    height: 32px;
+  }
+  .call-bottom {
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md) var(--space-lg);
+  }
+  .action-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .action-icon {
+    width: 20px;
+    height: 20px;
+  }
+  .btn-hangup {
+    width: 52px;
+    height: 52px;
+  }
+}

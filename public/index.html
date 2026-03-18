@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="pragma" content="no-cache" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>河北彩花 來電</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ===== 登入頁 ===== -->
+    <section id="page-login" class="page active">
+      <div class="login-wrapper">
+        <div class="login-avatar">
+          <div class="avatar-circle avatar-circle--login"><img src="/avatar.png" alt="河北彩花" class="avatar-img" /></div>
+        </div>
+        <h1 class="login-title">河北彩花</h1>
+        <p class="login-subtitle">語音通話</p>
+        <form id="form-login" autocomplete="on">
+          <div class="input-group">
+            <input type="text" id="input-username" placeholder="帳號" autocomplete="username" required />
+          </div>
+          <div class="input-group">
+            <input type="password" id="input-password" placeholder="密碼" autocomplete="current-password" required />
+          </div>
+          <p id="login-error" class="error-text"></p>
+          <button type="submit" id="btn-login" class="btn-primary">登入</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== 首頁 ===== -->
+    <section id="page-home" class="page">
+      <div class="home-wrapper">
+        <!-- Top bar -->
+        <header class="home-header">
+          <div class="home-header__left">
+            <span class="health-dot" id="health-dot"></span>
+            <span class="health-label" id="health-text">檢查中</span>
+          </div>
+          <div class="home-header__right">
+            <div class="key-indicators">
+              <span class="key-indicator" id="llm-indicator"><span class="key-dot"></span>LLM</span>
+              <span class="key-indicator" id="tts-indicator"><span class="key-dot"></span>TTS</span>
+              <span class="key-indicator" id="stt-indicator"><span class="key-dot"></span>STT</span>
+              <span class="key-indicator" id="mic-indicator"><span class="key-dot"></span>MIC</span>
+            </div>
+            <span class="user-label" id="user-name"></span>
+            <button type="button" id="btn-logout" class="btn-ghost">登出</button>
+          </div>
+        </header>
+
+        <!-- Center contact card -->
+        <div class="contact-card">
+          <div class="avatar-circle avatar-circle--large"><img src="/avatar.png" alt="河北彩花" class="avatar-img" /></div>
+          <h2 class="contact-name">河北彩花</h2>
+          <p class="contact-status">語音通話</p>
+        </div>
+
+        <!-- Call button -->
+        <div class="home-actions">
+          <button type="button" id="btn-call" class="btn-call-circle" aria-label="撥打電話">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+            </svg>
+          </button>
+          <span class="call-label">語音通話</span>
+        </div>
+      </div>
+
+      <!-- PWA install banner -->
+      <div id="install-banner" class="install-banner" style="display:none">
+        <span>安裝到手機桌面，體驗更好</span>
+        <button id="btn-install" class="btn-install">安裝</button>
+        <button id="btn-dismiss-install" class="btn-dismiss">&times;</button>
+      </div>
+    </section>
+
+    <!-- ===== 通話頁 ===== -->
+    <section id="page-call" class="page">
+      <div class="call-wrapper">
+
+        <!-- Top info -->
+        <div class="call-top">
+          <p class="call-top__status" id="call-status">正在呼叫...</p>
+          <span class="call-top__timer" id="call-timer"></span>
+        </div>
+
+        <!-- Center avatar area -->
+        <div class="call-center">
+          <div class="avatar-ring" id="avatar-ring">
+            <div class="avatar-ring__pulse"></div>
+            <div class="avatar-ring__pulse avatar-ring__pulse--delay"></div>
+            <div class="avatar-circle avatar-circle--call"><img src="/avatar.png" alt="河北彩花" class="avatar-img" /></div>
+          </div>
+          <h2 class="call-contact-name">河北彩花</h2>
+          <p class="call-activity" id="call-activity"></p>
+        </div>
+
+        <!-- Waveform visualizer -->
+        <div class="waveform-container">
+          <canvas id="waveform-canvas"></canvas>
+        </div>
+
+        <!-- Bottom action buttons (LINE style) -->
+        <div class="call-bottom">
+          <div class="call-actions-row">
+            <div class="action-item">
+              <button type="button" id="btn-mic" class="action-btn" disabled aria-label="麥克風">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                  <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/>
+                  <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+              </button>
+              <span class="action-label" id="mic-label">麥克風</span>
+            </div>
+            <div class="action-item">
+              <button type="button" id="btn-mute" class="action-btn" disabled aria-label="靜音">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                  <line x1="23" y1="9" x2="17" y2="15"/>
+                  <line x1="17" y1="9" x2="23" y2="15"/>
+                </svg>
+              </button>
+              <span class="action-label" id="mute-label">靜音</span>
+            </div>
+            <div class="action-item">
+              <button type="button" id="btn-send-text" class="action-btn" disabled aria-label="文字訊息">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                </svg>
+              </button>
+              <span class="action-label">文字說</span>
+            </div>
+          </div>
+
+          <!-- Hangup button -->
+          <button type="button" id="btn-hangup" class="btn-hangup" aria-label="掛斷">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Transcript drawer -->
+        <div class="transcript-drawer" id="transcript-drawer">
+          <div class="transcript-toggle" id="transcript-toggle">
+            <span class="transcript-toggle__bar"></span>
+            <span class="transcript-toggle__text">對話記錄</span>
+          </div>
+          <div class="transcript-box" id="transcript-box"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

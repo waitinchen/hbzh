@@ -1,0 +1,8 @@
+.git
+node_modules
+*.mp3
+docs
+realtime-voice-app
+CLAUDE_CODE_GUIDE.md
+ne-call-ui-preview.html
+.railwayignore
