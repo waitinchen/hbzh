@@ -303,12 +303,8 @@
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
         const f32 = e.inputBuffer.getChannelData(0);
 
-        // ★ TTS 進行中（播放中 或 句間空窗）→ 送靜音，避免回音觸發 OpenAI VAD
-        if (isPlaying || isTtsActive) {
-          const silence = new Int16Array(f32.length); // 全零
-          ws.send(silence.buffer);
-          return; // 不更新噪音底板和 UI 狀態
-        }
+        // ★ TTS 播放中也送真實音訊（允許 barge-in 打斷）
+        // 瀏覽器 echoCancellation 會過濾喇叭回音，Deepgram 只收到人聲
 
         // 動態噪音底板計算
         let sum = 0; for (let i = 0; i < f32.length; i++) sum += f32[i]*f32[i];
