@@ -620,16 +620,7 @@ function createDeepgramConnection(ws, callerName, attempt = 0) {
       if (msg.type === 'SpeechStarted') {
         console.log('[DG] Speech started');
         if (ttsActiveMap.get(ws) || responseActiveMap.get(ws)) {
-          // debounce 800ms — 避免回音誤觸打斷，等確認是真人說話
-          if (!interruptDebounceMap.has(ws)) {
-            const t = setTimeout(() => {
-              interruptDebounceMap.delete(ws);
-              if (ttsActiveMap.get(ws) || responseActiveMap.get(ws)) {
-                handleInterrupt(ws);
-              }
-            }, 800);
-            interruptDebounceMap.set(ws, t);
-          }
+          handleInterrupt(ws);
         } else {
           clearSilenceTimer(ws);
           resetSilenceNudge(ws);
@@ -826,7 +817,7 @@ wss.on('connection', (ws, req) => {
 
       if (msg.type === 'text' && msg.text?.trim()) {
         const txt = msg.text.trim();
-        send(ws, { type: 'user_transcript', text: txt });
+        // 不回傳 user_transcript，前端已自行顯示
         triggerClaudeResponse(ws, callerName, txt);
         return;
       }

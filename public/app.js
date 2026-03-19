@@ -332,8 +332,12 @@
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
         const f32 = e.inputBuffer.getChannelData(0);
 
-        // ★ TTS 播放中也送真實音訊（允許 barge-in 打斷）
-        // 瀏覽器 echoCancellation 會過濾喇叭回音，Deepgram 只收到人聲
+        // ★ TTS 播放中送靜音，避免回音觸發 Deepgram VAD
+        if (isPlaying || isTtsActive) {
+          const silence = new Int16Array(f32.length);
+          ws.send(silence.buffer);
+          return;
+        }
 
         // 動態噪音底板計算
         let sum = 0; for (let i = 0; i < f32.length; i++) sum += f32[i]*f32[i];
