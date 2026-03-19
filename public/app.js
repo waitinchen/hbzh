@@ -608,10 +608,18 @@
 
   // 頭像點擊放大
   const avatarOverlay = $('avatar-overlay');
-  document.querySelectorAll('.avatar-img').forEach(img => {
-    img.addEventListener('click', () => { avatarOverlay.style.display = 'flex'; });
+  function openAvatar(e) { e.preventDefault(); e.stopPropagation(); avatarOverlay.style.display = 'flex'; }
+  function closeAvatar() { avatarOverlay.style.display = 'none'; }
+  // 綁在 circle 和 img 上（雙重保險），click + touchend 都綁
+  document.querySelectorAll('.avatar-circle, .avatar-img').forEach(el => {
+    el.addEventListener('click', openAvatar);
+    el.addEventListener('touchend', openAvatar);
+    el.style.cursor = 'pointer';
   });
-  if (avatarOverlay) avatarOverlay.addEventListener('click', () => { avatarOverlay.style.display = 'none'; });
+  if (avatarOverlay) {
+    avatarOverlay.addEventListener('click', closeAvatar);
+    avatarOverlay.addEventListener('touchend', closeAvatar);
+  }
 
   if ('serviceWorker' in navigator) {
     // ★ 新 SW 接管時自動 reload，確保拿到最新 app.js
