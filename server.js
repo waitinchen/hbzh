@@ -274,7 +274,7 @@ const interruptDebounceMap = new Map(); // ws → timer (防止回音誤觸打�
 
 // ── Conversation history (keyed by callerName, persists across calls) ────
 const conversationHistory = new Map();
-const MAX_HISTORY = 20;
+const MAX_HISTORY = 50;
 
 function getHistory(callerName) {
   if (!conversationHistory.has(callerName)) conversationHistory.set(callerName, []);
