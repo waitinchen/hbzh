@@ -118,7 +118,7 @@ function taipeiNow() {
 }
 
 function buildSystemPrompt(callerName, factsBlock) {
-  const name = callerName || '主人';
+  const name = '主人'; // 統一稱呼主人，不用帳號名
   const t = taipeiNow();
   const metaBlock = META_MEMORY
     ? `\n【元記憶 — 你的核心人格與風格】\n${META_MEMORY}\n\n`
@@ -720,8 +720,8 @@ async function triggerGreeting(ws, callerName) {
   const history = getHistory(callerName);
   const hasHistory = history.length > 0;
   const greetingText = hasHistory
-    ? `（電話還在通話中，${callerName}剛才可能訊號不好斷了一下，不用打招呼，自然接著剛才的話題繼續聊就好）`
-    : `${callerName}打電話來了，接起來開場`;
+    ? `（電話還在通話中，主人剛才可能訊號不好斷了一下，不用打招呼，自然接著剛才的話題繼續聊就好）`
+    : `主人打電話來了，接起來開場`;
   console.log('[Greeting] Triggering for', callerName, hasHistory ? '(reconnect)' : '(first call)');
   await triggerClaudeResponse(ws, callerName, greetingText);
 }
