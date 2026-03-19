@@ -532,7 +532,7 @@ async function triggerClaudeResponse(ws, callerName, userText) {
       const cleanDelta = delta.replace(EMOTION_RE_G, '').replace(FACT_RE, '');
       sentenceBuffer += cleanDelta;
 
-      const displayText = fullText.replace(EMOTION_RE_G, '').replace(FACT_RE, '').replace(/\[[^\]]*$/, '').trim();
+      const displayText = fullText.replace(EMOTION_RE_G, '').replace(FACT_RE, '').replace(/<#[^#]*#>/g, '').replace(/\[[^\]]*$/, '').trim();
       send(ws, { type: 'transcript', text: tify(displayText) });
 
       flushSentence(false);
@@ -551,7 +551,7 @@ async function triggerClaudeResponse(ws, callerName, userText) {
 
       if (fullText) {
         extractAndSaveFacts(callerName, fullText);
-        const displayClean = tify(fullText.replace(EMOTION_RE_G, '').replace(FACT_RE, '').trim());
+        const displayClean = tify(fullText.replace(EMOTION_RE_G, '').replace(FACT_RE, '').replace(/<#[^#]*#>/g, '').trim());
         addHistory(callerName, 'assistant', displayClean);
       }
 
