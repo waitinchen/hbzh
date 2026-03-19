@@ -489,7 +489,7 @@ async function triggerClaudeResponse(ws, callerName, userText) {
   ttsAbortMap.set(ws, abortCtrl);
 
   let sentenceBuffer = '';
-  let currentEmotion = 'happy';
+  let lastEmotion = 'happy'; // 上一句的 emotion，作為下一句的 fallback
   let fullText = '';
 
   function flushSentence(force = false) {
@@ -498,9 +498,12 @@ async function triggerClaudeResponse(ws, callerName, userText) {
     if (!text) return;
     const endsWithPunct = SENTENCE_END.test(text[text.length - 1]);
     if (force || text.length > 80 || (endsWithPunct && text.length >= MIN_SENTENCE_LEN)) {
+      // 逐句提取 emotion：從這句 buffer 中找，找不到就用上一句的
+      const sentenceEmotionMatch = text.match(EMOTION_RE);
+      if (sentenceEmotionMatch) lastEmotion = sentenceEmotionMatch[1].toLowerCase();
       sentenceBuffer = '';
       const cleanText = sify(text).replace(EMOTION_RE_G, '').replace(FACT_RE, '').trim();
-      if (cleanText) queueTts(ws, cleanText, currentEmotion, abortCtrl.signal);
+      if (cleanText) queueTts(ws, cleanText, lastEmotion, abortCtrl.signal);
     }
   }
 
@@ -526,10 +529,8 @@ async function triggerClaudeResponse(ws, callerName, userText) {
 
       fullText += delta;
 
-      const emotionMatch = fullText.match(EMOTION_RE);
-      if (emotionMatch) currentEmotion = emotionMatch[1].toLowerCase();
-
-      const cleanDelta = delta.replace(EMOTION_RE_G, '').replace(FACT_RE, '');
+      // emotion 標記保留在 sentenceBuffer，讓 flushSentence 逐句提取
+      const cleanDelta = delta.replace(FACT_RE, '');
       sentenceBuffer += cleanDelta;
 
       const displayText = fullText.replace(EMOTION_RE_G, '').replace(FACT_RE, '').replace(/<#[^#]*#>/g, '').replace(/\[[^\]]*$/, '').trim();
@@ -542,8 +543,10 @@ async function triggerClaudeResponse(ws, callerName, userText) {
 
     if (!abortCtrl.signal.aborted) {
       if (sentenceBuffer.trim()) {
+        const remainEmotionMatch = sentenceBuffer.match(EMOTION_RE);
+        if (remainEmotionMatch) lastEmotion = remainEmotionMatch[1].toLowerCase();
         const cleanRemaining = sify(sentenceBuffer.trim()).replace(EMOTION_RE_G, '').replace(FACT_RE, '').trim();
-        if (cleanRemaining) queueTts(ws, cleanRemaining, currentEmotion, abortCtrl.signal);
+        if (cleanRemaining) queueTts(ws, cleanRemaining, lastEmotion, abortCtrl.signal);
         sentenceBuffer = '';
       }
 
