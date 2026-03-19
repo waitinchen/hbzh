@@ -707,7 +707,7 @@ async function triggerGreeting(ws, callerName) {
   const history = getHistory(callerName);
   const hasHistory = history.length > 0;
   const greetingText = hasHistory
-    ? `${callerName}重新打電話來了，你們之前已經聊過了，自然接著聊`
+    ? `（電話還在通話中，${callerName}剛才可能訊號不好斷了一下，不用打招呼，自然接著剛才的話題繼續聊就好）`
     : `${callerName}打電話來了，接起來開場`;
   console.log('[Greeting] Triggering for', callerName, hasHistory ? '(reconnect)' : '(first call)');
   await triggerClaudeResponse(ws, callerName, greetingText);
