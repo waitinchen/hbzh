@@ -62,12 +62,15 @@
   const audioEl = new Audio();
   let playbackWatchdog = null; // 防止 isPlaying 卡住的安全計時器
   // PC Chrome autoplay policy: user gesture 內觸發一次 play 解鎖
+  // 最短合法 MP3（靜音，173 bytes）
+  const SILENT_MP3 = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRBqJAAAAAAD/+1DEAAAHAAGf9AAAIgAAM/6QABBEAAB0QAAABAIBBkGQdBwfB8Hw';
+  let audioUnlocked = false;
   function unlockAudio() {
-    // 用 user gesture 建立 AudioContext（通知瀏覽器允許音訊）
+    if (audioUnlocked) return;
+    // 用 user gesture 建立 AudioContext
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       if (ctx.state === 'suspended') ctx.resume();
-      // 播一個極短靜音 buffer
       const buf = ctx.createBuffer(1, 1, 22050);
       const src = ctx.createBufferSource();
       src.buffer = buf;
@@ -75,9 +78,17 @@
       src.start();
       src.onended = () => ctx.close();
     } catch (e) {}
-    // 同時解鎖 HTMLAudioElement
-    audioEl.muted = true;
-    audioEl.play().then(() => { audioEl.pause(); audioEl.muted = false; }).catch(() => { audioEl.muted = false; });
+    // 用靜音 MP3 解鎖 HTMLAudioElement（比空 src + muted 更可靠）
+    audioEl.src = SILENT_MP3;
+    audioEl.play().then(() => {
+      audioEl.pause();
+      audioEl.src = '';
+      audioUnlocked = true;
+      console.log('[Audio] Unlock OK');
+    }).catch(() => {
+      audioEl.src = '';
+      console.warn('[Audio] Unlock failed, will retry on connect');
+    });
   }
 
   // State
@@ -207,6 +218,7 @@
         [btnMic, btnMute, btnSendText].forEach(b => b.disabled = false);
         addTranscript('system', '通話已接通');
         if (callWrapper) callWrapper.classList.add('connected');
+        if (!audioUnlocked) unlockAudio(); // 再試一次解鎖音訊
         startCallTimer(); startWaveform(); startMic();
         break;
       case 'ended':
@@ -332,17 +344,12 @@
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
         const f32 = e.inputBuffer.getChannelData(0);
 
-        // ★ TTS 播放中送靜音，避免回音觸發 Deepgram VAD
-        if (isPlaying || isTtsActive) {
-          const silence = new Int16Array(f32.length);
-          ws.send(silence.buffer);
-          return;
-        }
-
         // 動態噪音底板計算
         let sum = 0; for (let i = 0; i < f32.length; i++) sum += f32[i]*f32[i];
         const rms = Math.sqrt(sum / f32.length);
-        const dynamicThreshold = Math.max(VAD_THRESHOLD_MIN, noiseFloor * 2.0);
+        // ★ TTS 播放中提高 VAD 門檻（3.5x），只讓大聲人聲通過，過濾揚聲器回音
+        const vadMultiplier = (isPlaying || isTtsActive) ? 3.5 : 1.0;
+        const dynamicThreshold = Math.max(VAD_THRESHOLD_MIN, noiseFloor * 2.0) * vadMultiplier;
 
         // ★ 噪音閘門：低於門檻 → 送靜音（擋掉背景影片/電視系統音）
         if (rms < dynamicThreshold) {
@@ -447,7 +454,16 @@
     if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
     currentBlobUrl = url;
     audioEl.src = currentBlobUrl;
-    audioEl.play().catch(err => { console.warn('[Audio] play:', err.message); isPlaying = false; playNext(); });
+    audioEl.play().catch(err => {
+      console.warn('[Audio] play failed, retrying...', err.message);
+      // 100ms 後重試一次（瀏覽器 autoplay 有時第二次就成功）
+      setTimeout(() => {
+        audioEl.play().catch(err2 => {
+          console.warn('[Audio] retry also failed:', err2.message);
+          isPlaying = false; playNext();
+        });
+      }, 100);
+    });
     audioEl.onended = () => playNext();
     audioEl.onerror = () => playNext();
     // ★ Watchdog: 30 秒內沒播完就強制跳下一個（防止 isPlaying 卡住）

@@ -36,10 +36,18 @@ const __dirname  = fileURLToPath(new URL('.', import.meta.url));
 const PORT       = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = join(__dirname, 'public');
 
-const FIXED_USERNAME = (process.env.AUTH_USERNAME || 'ALLEN').toUpperCase();
-const FIXED_PASSWORD = process.env.AUTH_PASSWORD || '1688';
-const AUTH_TOKEN     = 'xiaos-' + createHash('sha256')
-  .update(FIXED_USERNAME + ':' + FIXED_PASSWORD).digest('hex').slice(0, 16);
+// ── 多帳號認證 ──
+const USERS = {};       // { USERNAME: { password, token } }
+const TOKEN_TO_USER = {}; // { token: USERNAME }
+for (const entry of (process.env.AUTH_USERS || 'ALLEN:1688,MARK:1688,JAMES:1688,OTIS:1688').split(',')) {
+  const [n, p] = entry.split(':');
+  const uname = (n || '').trim().toUpperCase();
+  const pw = (p || '1688').trim();
+  if (!uname) continue;
+  const token = 'xiaos-' + createHash('sha256').update(uname + ':' + pw).digest('hex').slice(0, 16);
+  USERS[uname] = { password: pw, token };
+  TOKEN_TO_USER[token] = uname;
+}
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const DEEPGRAM_API_KEY  = process.env.DEEPGRAM_API_KEY  || '';
@@ -276,6 +284,7 @@ const wsPingMap        = new Map();
 const isTtsPlaying     = new Map();
 const ttsAbortMap      = new Map();
 const audioLogMap      = new Map();
+const recentRmsMap     = new Map(); // 最近音訊 RMS（用於 barge-in 能量檢查）
 const ttsActiveMap     = new Map();
 const claudeAbortMap   = new Map(); // ws → AbortController
 const responseActiveMap = new Map();
@@ -492,7 +501,7 @@ async function triggerClaudeResponse(ws, callerName, userText) {
   if (userText) addHistory(callerName, 'user', userText);
 
   responseActiveMap.set(ws, true);
-  interruptCooldownMap.set(ws, Date.now() + 2000); // 2 秒內不允許 interrupt
+  interruptCooldownMap.set(ws, Date.now() + 3000); // 3 秒內不允許 interrupt（防回音誤觸）
   send(ws, { type: 'status', state: 'thinking' });
 
   const abortCtrl = new AbortController();
@@ -632,11 +641,14 @@ function createDeepgramConnection(ws, callerName, attempt = 0) {
       const msg = JSON.parse(raw.toString());
 
       if (msg.type === 'SpeechStarted') {
-        console.log('[DG] Speech started');
+        const rms = recentRmsMap.get(ws) || 0;
+        console.log('[DG] Speech started, rms:', rms.toFixed(4));
         if (ttsActiveMap.get(ws) || responseActiveMap.get(ws)) {
-          // 回應開始 2 秒內不允許 interrupt（防止回音/尾音誤觸）
+          // 回應開始 3 秒內不允許 interrupt（防止回音/尾音誤觸）
           const cooldown = interruptCooldownMap.get(ws) || 0;
           if (Date.now() < cooldown) return;
+          // RMS 能量太低 → 可能是回音不是真人聲，忽略
+          if (rms < 0.02) { console.log('[DG] Ignoring low-energy speech (echo?)'); return; }
           handleInterrupt(ws);
         } else {
           clearSilenceTimer(ws);
@@ -755,8 +767,10 @@ const server = createServer((req, res) => {
       res.setHeader('Content-Type', 'application/json');
       try {
         const { username, password } = JSON.parse(body || '{}');
-        if ((username||'').trim().toUpperCase() === FIXED_USERNAME && String(password) === FIXED_PASSWORD) {
-          res.writeHead(200); res.end(JSON.stringify({ token: AUTH_TOKEN, username: FIXED_USERNAME }));
+        const uname = (username || '').trim().toUpperCase();
+        const user = USERS[uname];
+        if (user && String(password) === user.password) {
+          res.writeHead(200); res.end(JSON.stringify({ token: user.token, username: uname }));
         } else {
           res.writeHead(401); res.end(JSON.stringify({ message: '帳號或密碼錯誤' }));
         }
@@ -782,9 +796,8 @@ const wss = new WebSocketServer({ server, path: '/voice' });
 wss.on('connection', (ws, req) => {
   const u     = new URL(req.url || '', 'http://localhost');
   const token = u.searchParams.get('token');
-  if (token !== AUTH_TOKEN) { ws.close(4001, 'Unauthorized'); return; }
-
-  const callerName = (u.searchParams.get('name') || FIXED_USERNAME).toUpperCase();
+  const callerName = TOKEN_TO_USER[token];
+  if (!callerName) { ws.close(4001, 'Unauthorized'); return; }
   callerNames.set(ws, callerName);
   isTtsPlaying.set(ws, false);
   audioLogMap.set(ws, 0);
@@ -811,9 +824,13 @@ wss.on('connection', (ws, req) => {
         const fromRate = clientSrMap.get(ws) || 48000;
         const pcm16k = resampleTo16k(raw, fromRate);
 
-        // TTS active → send silence to prevent Deepgram VAD echo trigger
-        const audioToSend = ttsActiveMap.get(ws) ? Buffer.alloc(pcm16k.length) : pcm16k;
-        dgWs.send(audioToSend);
+        // 計算 RMS 用於 barge-in 能量檢查
+        const samples = new Int16Array(pcm16k.buffer, pcm16k.byteOffset, pcm16k.byteLength >> 1);
+        let s = 0; for (let i = 0; i < samples.length; i++) s += samples[i] * samples[i];
+        recentRmsMap.set(ws, Math.sqrt(s / samples.length) / 32768);
+
+        // 送真實音訊給 Deepgram（客戶端已用 VAD 門檻過濾回音）
+        dgWs.send(pcm16k);
       } catch (e) { console.error('[Audio] Resample error:', e.message); }
       return;
     }
@@ -859,6 +876,7 @@ wss.on('connection', (ws, req) => {
     responseActiveMap.delete(ws);
     ttsQueueMap.delete(ws);
     interruptCooldownMap.delete(ws);
+    recentRmsMap.delete(ws);
   });
 
   ws.on('error', (err) => console.error('[WS] Error:', err.message));
